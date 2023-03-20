@@ -34,7 +34,7 @@ public class NFCReader
         {
             int nErrCode = Card.SCardGetStatusChange(hContext, 1000, ref states[0], 1);
 
-            if (nErrCode == Card.SCARD_E_SERVICE_STOPPED)
+            if (nErrCode == Card.SCARD_E_SERVICE_STOPPED || _worker.CancellationPending)
             {
                 DeviceDisconnected();
                 e.Cancel = true;
@@ -393,7 +393,7 @@ public class NFCReader
             tmpStr = t.ToArray();
             return tmpStr;
         }
-        else return new byte[]{};
+        else return new byte[] { };
     }
     public bool Connect()
     {
@@ -445,7 +445,12 @@ public class NFCReader
     public void Watch()
     {
         this.RdrState = new Card.SCARD_READERSTATE();
-        readername = GetReadersList()[0];
+        try { 
+            readername = GetReadersList()[0];
+        }
+        catch (Exception ex) {
+            MessageBox.Show("There is no card reader connected to this device");
+        }
         this.RdrState.RdrName = readername;
 
         states = new Card.SCARD_READERSTATE[1];
@@ -456,11 +461,19 @@ public class NFCReader
         states[0].RdrEventState = 0;
         states[0].ATRLength = 0;
         states[0].ATRValue = null;
-        this._worker = new BackgroundWorker();
-        this._worker.WorkerSupportsCancellation = true;
+        this._worker = new BackgroundWorker {
+            WorkerSupportsCancellation = true
+        };
         this._worker.DoWork += WaitChangeStatus;
         this._worker.RunWorkerAsync();
     }
+    // Required for multi form projects
+    // Call this on form close event to prevent
+    // Background worker from listening
+    // after form is closed
+    public void Unwatch() {
+        _worker.CancelAsync();
+    } 
     public NFCReader()
     {
     }
