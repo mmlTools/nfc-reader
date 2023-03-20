@@ -472,7 +472,8 @@ public class NFCReader
     // Background worker from listening
     // after form is closed
     public void Unwatch() {
-        _worker.CancelAsync();
+        if (_worker != null)
+            _worker.CancelAsync();
     } 
     public NFCReader()
     {
